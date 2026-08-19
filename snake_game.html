@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Змейка</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            color: #00ff88;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+            font-size: 2.5rem;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 15px;
+            color: #fff;
+            font-size: 1.2rem;
+        }
+
+        .score-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        #gameCanvas {
+            border: 3px solid #00ff88;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+            background: #0a0a1a;
+        }
+
+        .controls {
+            margin-top: 20px;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .mobile-controls {
+            display: none;
+            margin-top: 20px;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .mobile-btn:active {
+            background: rgba(0, 255, 136, 0.4);
+            transform: scale(0.9);
+        }
+
+        @media (max-width: 768px) {
+            .mobile-controls {
+                display: flex;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .score-board {
+                font-size: 1rem;
+                gap: 15px;
+            }
+        }
+
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid #00ff88;
+            display: none;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .overlay h2 {
+            color: #00ff88;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+
+        .overlay p {
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+
+        .overlay button {
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            background: #00ff88;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .overlay button:hover {
+            background: #00cc6a;
+            transform: scale(1.05);
+        }
+
+        .legend {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            color: #fff;
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🐍 Змейка</h1>
+        
+        <div class="score-board">
+            <div class="score-item">Очки: <span id="score">0</span></div>
+            <div class="score-item">Рекорд: <span id="highScore">0</span></div>
+        </div>
+
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b;"></div>
+                <span>+1 (постоянная)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffd93d;"></div>
+                <span>+3 (5 сек)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #6bcb77;"></div>
+                <span>-1 (20 сек)</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            Управление: Стрелки или WASD<br>
+            Пауза: Пробел
+        </div>
+
+        <div class="mobile-controls">
+            <button class="mobile-btn" onclick="changeDirection('up')">↑</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="mobile-btn" onclick="changeDirection('left')">←</button>
+                <button class="mobile-btn" onclick="changeDirection('down')">↓</button>
+                <button class="mobile-btn" onclick="changeDirection('right')">→</button>
+            </div>
+        </div>
+
+        <div id="gameOverOverlay" class="overlay">
+            <h2>💀 Игра окончена!</h2>
+            <p>Ваш счет: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">Играть снова</button>
+        </div>
+
+        <div id="winOverlay" class="overlay">
+            <h2>🏆 Победа!</h2>
+            <p>Поздравляем! Вы набрали 50 очков!</p>
+            <p>Ваш счет: <span id="winScore">50</span></p>
+            <button onclick="restartGame()">Играть снова</button>
+        </div>
+
+        <div id="pauseOverlay" class="overlay">
+            <h2>⏸️ Пауза</h2>
+            <p>Нажмите пробел для продолжения</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('highScore');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const winOverlay = document.getElementById('winOverlay');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const finalScoreElement = document.getElementById('finalScore');
+        const winScoreElement = document.getElementById('winScore');
+
+        // Настройки игры
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+        let gameSpeed = 100;
+        
+        // Состояние игры
+        let snake = [];
+        let direction = { x: 1, y: 0 };
+        let nextDirection = { x: 1, y: 0 };
+        let score = 0;
+        let highScore = localStorage.getItem('snakeHighScore') || 0;
+        let gameLoop;
+        let isGameOver = false;
+        let isPaused = false;
+        let isWin = false;
+        let deathAnimation = null;
+        let particles = [];
+
+        // Типы еды
+        const foodTypes = {
+            normal: { color: '#ff6b6b', points: 1, lifetime: null, radius: 8 },
+            bonus: { color: '#ffd93d', points: 3, lifetime: 5000, radius: 10 },
+            penalty: { color: '#6bcb77', points: -1, lifetime: 20000, radius: 7 }
+        };
+
+        let foods = [];
+
+        // Инициализация
+        highScoreElement.textContent = highScore;
+        initGame();
+
+        function initGame() {
+            snake = [
+                { x: 10, y: 10 },
+                { x: 9, y: 10 },
+                { x: 8, y: 10 }
+            ];
+            direction = { x: 1, y: 0 };
+            nextDirection = { x: 1, y: 0 };
+            score = 0;
+            isGameOver = false;
+            isPaused = false;
+            isWin = false;
+            deathAnimation = null;
+            particles = [];
+            foods = [];
+            scoreElement.textContent = score;
+            gameOverOverlay.style.display = 'none';
+            winOverlay.style.display = 'none';
+            pauseOverlay.style.display = 'none';
+            
+            spawnFood('normal');
+            
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(update, gameSpeed);
+            
+            requestAnimationFrame(render);
+        }
+
+        function spawnFood(type) {
+            let position;
+            do {
+                position = {
+                    x: Math.floor(Math.random() * tileCount),
+                    y: Math.floor(Math.random() * tileCount)
+                };
+            } while (isPositionOccupied(position));
+
+            const food = {
+                ...position,
+                type: type,
+                createdAt: Date.now(),
+                pulse: 0
+            };
+
+            if (foodTypes[type].lifetime) {
+                setTimeout(() => {
+                    const index = foods.findIndex(f => f === food);
+                    if (index !== -1 && !food.eaten) {
+                        foods.splice(index, 1);
+                        // Спавним новую еду того же типа
+                        setTimeout(() => spawnFood(type), 1000);
+                    }
+                }, foodTypes[type].lifetime);
+            }
+
+            foods.push(food);
+        }
+
+        function isPositionOccupied(pos) {
+            // Проверка на змейке
+            for (let segment of snake) {
+                if (segment.x === pos.x && segment.y === pos.y) return true;
+            }
+            // Проверка на другой еде
+            for (let food of foods) {
+                if (food.x === pos.x && food.y === pos.y) return true;
+            }
+            return false;
+        }
+
+        function update() {
+            if (isGameOver || isPaused || deathAnimation) return;
+
+            direction = nextDirection;
+
+            const head = {
+                x: snake[0].x + direction.x,
+                y: snake[0].y + direction.y
+            };
+
+            // Прохождение сквозь стены
+            if (head.x < 0) head.x = tileCount - 1;
+            if (head.x >= tileCount) head.x = 0;
+            if (head.y < 0) head.y = tileCount - 1;
+            if (head.y >= tileCount) head.y = 0;
+
+            // Проверка на столкновение с собой
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    startDeathAnimation(head);
+                    return;
+                }
+            }
+
+            snake.unshift(head);
+
+            // Проверка на еду
+            let ate = false;
+            for (let i = 0; i < foods.length; i++) {
+                if (foods[i].x === head.x && foods[i].y === head.y && !foods[i].eaten) {
+                    const food = foods[i];
+                    score += foodTypes[food.type].points;
+                    food.eaten = true;
+                    foods.splice(i, 1);
+                    createEatParticles(head.x * gridSize + gridSize/2, head.y * gridSize + gridSize/2, foodTypes[food.type].color);
+                    
+                    if (score < 0) score = 0;
+                    scoreElement.textContent = score;
+                    
+                    // Спавн новой еды
+                    if (food.type === 'normal') {
+                        setTimeout(() => spawnFood('normal'), 500);
+                    } else if (food.type === 'bonus') {
+                        setTimeout(() => spawnFood('bonus'), 2000);
+                    } else if (food.type === 'penalty') {
+                        setTimeout(() => spawnFood('penalty'), 3000);
+                    }
+                    
+                    // Проверка победы
+                    if (score >= 50) {
+                        winGame();
+                    }
+                    
+                    ate = true;
+                    break;
+                }
+            }
+
+            if (!ate) {
+                snake.pop();
+            }
+
+            // Спавн бонусной еды периодически
+            if (Math.random() < 0.02 && !foods.some(f => f.type === 'bonus')) {
+                spawnFood('bonus');
+            }
+            
+            // Спавн штрафной еды периодически
+            if (Math.random() < 0.01 && !foods.some(f => f.type === 'penalty')) {
+                spawnFood('penalty');
+            }
+        }
+
+        function render() {
+            // Очистка
+            ctx.fillStyle = '#0a0a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Рисуем сетку
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= tileCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
+
+            // Рисуем еду
+            foods.forEach(food => {
+                const config = foodTypes[food.type];
+                const centerX = food.x * gridSize + gridSize / 2;
+                const centerY = food.y * gridSize + gridSize / 2;
+                
+                // Пульсация
+                food.pulse = (Date.now() / 200) % (Math.PI * 2);
+                const pulseSize = Math.sin(food.pulse) * 2;
+                
+                // Свечение
+                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, config.radius + 5 + pulseSize);
+                gradient.addColorStop(0, config.color);
+                gradient.addColorStop(0.5, config.color + '80');
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, config.radius + 5 + pulseSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Основная часть
+                ctx.fillStyle = config.color;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, config.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Блик
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(centerX - 3, centerY - 3, config.radius / 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Рисуем змейку
+            if (!deathAnimation) {
+                snake.forEach((segment, index) => {
+                    const x = segment.x * gridSize;
+                    const y = segment.y * gridSize;
+                    
+                    // Градиент для змейки
+                    const hue = 140 + (index * 2) % 40;
+                    const saturation = 80 + (index * 0.5) % 20;
+                    const lightness = 50 - (index * 0.3) % 10;
+                    
+                    ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                    
+                    // Скругленные сегменты
+                    const radius = index === 0 ? 10 : 8;
+                    ctx.beginPath();
+                    ctx.roundRect(x + 1, y + 1, gridSize - 2, gridSize - 2, radius);
+                    ctx.fill();
+                    
+                    // Глаза у головы
+                    if (index === 0) {
+                        ctx.fillStyle = '#fff';
+                        const eyeOffset = 5;
+                        const eyeSize = 4;
+                        
+                        let eye1X, eye1Y, eye2X, eye2Y;
+                        
+                        if (direction.x === 1) {
+                            eye1X = x + gridSize - 6;
+                            eye1Y = y + 5;
+                            eye2X = x + gridSize - 6;
+                            eye2Y = y + gridSize - 9;
+                        } else if (direction.x === -1) {
+                            eye1X = x + 4;
+                            eye1Y = y + 5;
+                            eye2X = x + 4;
+                            eye2Y = y + gridSize - 9;
+                        } else if (direction.y === -1) {
+                            eye1X = x + 5;
+                            eye1Y = y + 4;
+                            eye2X = x + gridSize - 9;
+                            eye2Y = y + 4;
+                        } else {
+                            eye1X = x + 5;
+                            eye1Y = y + gridSize - 8;
+                            eye2X = x + gridSize - 9;
+                            eye2Y = y + gridSize - 8;
+                        }
+                        
+                        ctx.beginPath();
+                        ctx.arc(eye1X, eye1Y, eyeSize, 0, Math.PI * 2);
+                        ctx.arc(eye2X, eye2Y, eyeSize, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = '#000';
+                        ctx.beginPath();
+                        ctx.arc(eye1X + direction.x, eye1Y + direction.y, 2, 0, Math.PI * 2);
+                        ctx.arc(eye2X + direction.x, eye2Y + direction.y, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+            }
+
+            // Рисуем частицы
+            updateAndRenderParticles();
+
+            // Рисуем анимацию смерти
+            if (deathAnimation) {
+                renderDeathAnimation();
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        // Система частиц
+        function createEatParticles(x, y, color) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 1,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+
+        function createDeathParticles(x, y) {
+            for (let i = 0; i < 30; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: (Math.random() - 0.5) * 15,
+                    life: 1,
+                    color: `hsl(${Math.random() * 60 + 120}, 80%, 50%)`,
+                    size: Math.random() * 6 + 3
+                });
+            }
+        }
+
+        function updateAndRenderParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3; // гравитация
+                p.life -= 0.02;
+                p.size *= 0.98;
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // Анимация смерти
+        function startDeathAnimation(headPos) {
+            deathAnimation = {
+                headX: headPos.x * gridSize + gridSize / 2,
+                headY: headPos.y * gridSize + gridSize / 2,
+                frame: 0,
+                maxFrames: 60
+            };
+            
+            createDeathParticles(deathAnimation.headX, deathAnimation.headY);
+            
+            setTimeout(() => {
+                endGame();
+            }, 2000);
+        }
+
+        function renderDeathAnimation() {
+            if (!deathAnimation) return;
+            
+            deathAnimation.frame++;
+            const progress = deathAnimation.frame / deathAnimation.maxFrames;
+            
+            // Эффект затухания змейки
+            ctx.globalAlpha = 1 - progress;
+            
+            snake.forEach((segment, index) => {
+                const x = segment.x * gridSize;
+                const y = segment.y * gridSize;
+                const shake = Math.sin(deathAnimation.frame * 0.5 + index) * (1 - progress) * 10;
+                
+                ctx.fillStyle = `hsl(${140 + index * 2}, 80%, ${50 - progress * 30}%)`;
+                ctx.beginPath();
+                ctx.roundRect(x + 1 + shake, y + 1, gridSize - 2, gridSize - 2, 8);
+                ctx.fill();
+            });
+            
+            ctx.globalAlpha = 1;
+            
+            // Взрыв в голове
+            const explosionRadius = progress * 80;
+            const gradient = ctx.createRadialGradient(
+                deathAnimation.headX, deathAnimation.headY, 0,
+                deathAnimation.headX, deathAnimation.headY, explosionRadius
+            );
+            gradient.addColorStop(0, 'rgba(255, 100, 100, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(255, 50, 50, 0.4)');
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(deathAnimation.headX, deathAnimation.headY, explosionRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function endGame() {
+            isGameOver = true;
+            deathAnimation = null;
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('snakeHighScore', highScore);
+                highScoreElement.textContent = highScore;
+            }
+            
+            finalScoreElement.textContent = score;
+            gameOverOverlay.style.display = 'block';
+        }
+
+        function winGame() {
+            isWin = true;
+            winScoreElement.textContent = score;
+            winOverlay.style.display = 'block';
+            
+            // Праздничные частицы
+            for (let i = 0; i < 100; i++) {
+                setTimeout(() => {
+                    createEatParticles(
+                        Math.random() * canvas.width,
+                        Math.random() * canvas.height,
+                        `hsl(${Math.random() * 360}, 100%, 50%)`
+                    );
+                }, i * 50);
+            }
+        }
+
+        function restartGame() {
+            initGame();
+        }
+
+        function changeDirection(dir) {
+            switch(dir) {
+                case 'up':
+                    if (direction.y !== 1) nextDirection = { x: 0, y: -1 };
+                    break;
+                case 'down':
+                    if (direction.y !== -1) nextDirection = { x: 0, y: 1 };
+                    break;
+                case 'left':
+                    if (direction.x !== 1) nextDirection = { x: -1, y: 0 };
+                    break;
+                case 'right':
+                    if (direction.x !== -1) nextDirection = { x: 1, y: 0 };
+                    break;
+            }
+        }
+
+        // Обработка клавиатуры
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (!isGameOver && !isWin) {
+                    isPaused = !isPaused;
+                    pauseOverlay.style.display = isPaused ? 'block' : 'none';
+                }
+                e.preventDefault();
+            }
+
+            switch(e.code) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    if (direction.y !== 1) nextDirection = { x: 0, y: -1 };
+                    e.preventDefault();
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    if (direction.y !== -1) nextDirection = { x: 0, y: 1 };
+                    e.preventDefault();
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    if (direction.x !== 1) nextDirection = { x: -1, y: 0 };
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    if (direction.x !== -1) nextDirection = { x: 1, y: 0 };
+                    e.preventDefault();
+                    break;
+            }
+        });
+
+        // Поддержка свайпов для мобильных
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+            
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 0) changeDirection('right');
+                else changeDirection('left');
+            } else {
+                if (dy > 0) changeDirection('down');
+                else changeDirection('up');
+            }
+            
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
